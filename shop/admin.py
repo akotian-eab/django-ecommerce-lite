@@ -61,6 +61,10 @@ class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "total")
     inlines = (OrderItemInline,)
 
+    def get_queryset(self, request):
+        """Use optimized queryset so list view totals don't N+1."""
+        return super().get_queryset(request).with_total()
+
     @admin.display(description="Total")
     def total(self, obj):
         return obj.total

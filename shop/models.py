@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
+from shop.managers import OrderQuerySet, ProductQuerySet
+
 
 class Category(models.Model):
     """
@@ -51,6 +53,8 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ProductQuerySet.as_manager()
 
     class Meta:
         ordering = ["name"]
@@ -108,6 +112,8 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = OrderQuerySet.as_manager()
+
     class Meta:
         ordering = ["-created_at"]
 
@@ -116,6 +122,15 @@ class Order(models.Model):
 
     @property
     def total(self):
+        """
+        Order total from line items.
+
+        If the queryset was built with ``Order.objects.with_total()``, reads
+        the SQL-computed ``total_amount`` annotation (no extra queries).
+        Otherwise falls back to summing items in Python (fine for a single order).
+        """
+        if hasattr(self, "total_amount"):
+            return self.total_amount or Decimal("0")
         return sum((item.line_total for item in self.items.all()), Decimal("0"))
 
 
